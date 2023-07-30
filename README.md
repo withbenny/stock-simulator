@@ -1,2 +1,1 @@
-Hello world!
-First commit from Benny
+**This project is not finished yet!**
