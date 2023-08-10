@@ -90,7 +90,8 @@ class Simulate:
         
         if share <= 0 or price <= 0:
             raise ValueError("The number of shares and price must be positive.")
-
+        
+        # share keeps four decimal places to support fractional shares
         share = math.floor(share * 10000) / 10000
         price = math.floor(price * 100) / 100
 
