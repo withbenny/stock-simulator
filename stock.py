@@ -9,6 +9,8 @@ from collections import namedtuple
 
 load_dotenv()
 
+INIT_MONEY = 100_000
+
 class Price(namedtuple('Price', 'price currency')):
     pass
 
@@ -53,14 +55,12 @@ class Simulate:
     def __init__(self, username:str) -> None:
         self.username = username
         self.holdings = {}
-        # Init cash of user is 100,000
-        self.cash = 100_000
 
         # username can only be numbers[0-9] and letters[a-z, A-Z]
         # username cannot start with a number
         # username must be longer than 5
         if not self.isValidName(username):
-            raise ValueError("Invaild username.")
+            raise ValueError("Invalid username.")
         
         # If username is new, creat a new file 
         if not os.path.exists(username + '.csv'):
@@ -68,41 +68,75 @@ class Simulate:
                 headers = ['symbol', 'quantity']
                 writer = csv.DictWriter(csvfile, fieldnames=headers)
                 writer.writeheader()
-                writer.writerow({'symbol': username+'CASH', 'quantity':self.cash})
+                writer.writerow({'symbol': username + 'CASH', 'quantity':INIT_MONEY})
         
         # If username is exist, load the data
         else:
             with open(username + '.csv', 'r', newline='') as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
-                    # Find the cash of user
-                    if row['symbol'] == username + 'CASH':
-                        self.cash = row['quantity']
                     symbol = row['symbol']
                     quantity = row['quantity']
                     self.holdings[symbol] = quantity
                 
-    def trade(self, symbol:str, mode:str, share:float, price:float):
+                if self.username + 'CASH' in self.holdings:
+                    self.cash = self.holdings.get(self.username + 'CASH')
+                else:
+                    self.cash = INIT_MONEY
+                
+    def trade(self, symbol:str, mode:str, share:float) -> None:
         self.symbol = symbol
         self.mode = mode
         self.share = share
-        self.price = price
+
+        cash = self.cash
         
         if share <= 0 or price <= 0:
-            raise ValueError("The number of shares and price must be positive.")
+            raise ValueError("Invalid values.")
         
         # share keeps four decimal places to support fractional shares
         share = math.floor(share * 10000) / 10000
-        price = math.floor(price * 100) / 100
 
+        # BUY
         if mode.casefold() == 'buy':
-            pass
-            
+            price = GetTicker(symbol).latestPrice()
+            cost = price * share
+            if cash - cost >= 0:
+                cash = cash - cost
+                self.holdings[self.username + 'CASH'] = cash
+                if symbol in self.holdings:
+                    self.holdings[symbol] = self.holdings.get(symbol) + share
+                else:
+                    self.holdings[symbol] = share
+            else:
+                raise ValueError("Invalid action.")
+
+        # SELL    
         elif mode.casefold() == 'sell':
-            pass
-            
+            price = GetTicker(symbol).latestPrice()
+            if symbol in self.holdings:
+                before = self.holdings.get(symbol)
+                if share <= before:
+                    income = price * share
+                    cash = cash + income
+                    self.holdings[self.username + 'CASH'] = cash
+                    if share == before:
+                        del self.holdings[symbol]
+                    else:
+                        self.holdings[symbol] = before - share
+                else:
+                    raise ValueError("Invalid action.")
+            else:
+                raise ValueError("Invalid action.")
+        
         else:
-            raise ValueError("Invalid trade mode. Please use buy or sell.(Not case sensitive)")
+            raise ValueError("Invalid trade mode.")
+        
+        # Save the data
+        with open(self.username + '.csv', 'w', newline='') as csvfile:
+            headers = ['symbol', 'quantity']
+            writer = csv.DictWriter(csvfile, fieldnames=headers)
+            writer.writerows(self.holdings)
         
         
     def isValidName(self, username:str) -> bool:
