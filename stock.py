@@ -98,6 +98,7 @@ class Simulate:
         share = math.floor(share * 10000) / 10000
 
         # BUY
+        # Ignore the case of 'buy' and 'sell'
         if mode.casefold() == 'buy':
             price = GetTicker(symbol).latestPrice()
             cost = price * share
@@ -105,9 +106,9 @@ class Simulate:
                 cash = cash - cost
                 self.holdings[self.username + 'CASH'] = cash
                 if symbol in self.holdings:
-                    self.holdings[symbol] = self.holdings.get(symbol) + share
+                    self.holdings[symbol] = math.floor((self.holdings.get(symbol) + share) * 10000) / 10000
                 else:
-                    self.holdings[symbol] = share
+                    self.holdings[symbol] = math.floor(share * 10000) / 10000
             else:
                 raise ValueError("Invalid action.")
 
@@ -123,12 +124,13 @@ class Simulate:
                     if share == before:
                         del self.holdings[symbol]
                     else:
-                        self.holdings[symbol] = before - share
+                        self.holdings[symbol] = math.floor((before - share) * 10000) / 10000
                 else:
                     raise ValueError("Invalid action.")
             else:
                 raise ValueError("Invalid action.")
         
+        # Other MODE
         else:
             raise ValueError("Invalid trade mode.")
         
