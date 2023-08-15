@@ -83,16 +83,24 @@ class Simulate:
                     self.cash = self.holdings.get(self.username + 'CASH')
                 else:
                     self.cash = INIT_MONEY
+                    with open(username + '.csv', 'w', newline='') as csvfile:
+                        headers = ['symbol', 'quantity']
+                        writer = csv.DictWriter(csvfile, fieldnames=headers)
+                        writer.writeheader()
+                        writer.writerow({'symbol': username + 'CASH', 'quantity':self.cash})
+        print(str(self.holdings))
                 
     def trade(self, symbol:str, mode:str, share:float) -> None:
         self.symbol = symbol
         self.mode = mode
         self.share = share
-
-        cash = self.cash
         
-        if share <= 0 or price <= 0:
+        if share <= 0:
             raise ValueError("Invalid values.")
+
+        self.cash = self.holdings.get(self.username + 'CASH')
+        cash = self.cash
+        cash = float(cash)
         
         # share keeps four decimal places to support fractional shares
         share = math.floor(share * 10000) / 10000
@@ -104,7 +112,9 @@ class Simulate:
             cost = price * share
             if cash - cost >= 0:
                 cash = cash - cost
+                # Chaneg the current cash
                 self.holdings[self.username + 'CASH'] = cash
+
                 if symbol in self.holdings:
                     self.holdings[symbol] = math.floor((self.holdings.get(symbol) + share) * 10000) / 10000
                 else:
@@ -120,6 +130,7 @@ class Simulate:
                 if share <= before:
                     income = price * share
                     cash = cash + income
+                    # Change the current cash
                     self.holdings[self.username + 'CASH'] = cash
                     if share == before:
                         del self.holdings[symbol]
@@ -134,11 +145,14 @@ class Simulate:
         else:
             raise ValueError("Invalid trade mode.")
         
+        print(str(self.holdings))
+
         # Save the data
         with open(self.username + '.csv', 'w', newline='') as csvfile:
             headers = ['symbol', 'quantity']
-            writer = csv.DictWriter(csvfile, fieldnames=headers)
-            writer.writerows(self.holdings)
+            writer = csv.DictWriter(csvfile, fieldnames=headers, extrasaction='ignore')
+            writer.writeheader()
+            writer.writerow(self.holdings)
         
         
     def isValidName(self, username:str) -> bool:
